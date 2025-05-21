@@ -36,7 +36,7 @@ python3 benchmark_serving.py \
     --num-prompts ${NUM_PROMPTS} \
     --ignore-eos \
     --random-input-len 1024 \
-    --random-output-len 16384 \
+    --random-output-len 128 \
     --random-range-ratio 0.9
     # --save-result \
     # --result-dir ./benchmark_results \
