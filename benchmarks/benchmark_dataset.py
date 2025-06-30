@@ -292,7 +292,7 @@ class RandomDataset(BenchmarkDataset):
     DEFAULT_RANGE_RATIO = 0.0
     DEFAULT_INPUT_LEN = 1024
     DEFAULT_OUTPUT_LEN = 128
-
+    DEFAULT_ROLLOUT_NUM = 1
     def __init__(
         self,
         **kwargs,
@@ -307,6 +307,7 @@ class RandomDataset(BenchmarkDataset):
         range_ratio: float = DEFAULT_RANGE_RATIO,
         input_len: int = DEFAULT_INPUT_LEN,
         output_len: int = DEFAULT_OUTPUT_LEN,
+        rollout_num: int = DEFAULT_ROLLOUT_NUM,
         **kwargs,
     ) -> list[SampleRequest]:
         # Enforce range_ratio < 1
@@ -330,27 +331,43 @@ class RandomDataset(BenchmarkDataset):
         logger.info("Sampling output_len from [%s, %s]", output_low,
                     output_high)
 
+        # Calculate base number of unique prompts needed
+        base_num_requests = num_requests // rollout_num if rollout_num > 1 else num_requests
+        if rollout_num > 1 and num_requests % rollout_num != 0:
+            base_num_requests += 1
+
         input_lens = np.random.randint(input_low,
                                        input_high + 1,
-                                       size=num_requests)
+                                       size=base_num_requests)
         output_lens = np.random.randint(output_low,
                                         output_high + 1,
-                                        size=num_requests)
-        offsets = np.random.randint(0, vocab_size, size=num_requests)
+                                        size=base_num_requests)
+        offsets = np.random.randint(0, vocab_size, size=base_num_requests)
 
         requests = []
-        for i in range(num_requests):
+        for i in range(base_num_requests):
             inner_seq = ((offsets[i] + i + np.arange(input_lens[i])) %
                          vocab_size).tolist()
             token_sequence = prefix_token_ids + inner_seq
             prompt = tokenizer.decode(token_sequence)
             total_input_len = prefix_len + int(input_lens[i])
-            requests.append(
-                SampleRequest(
-                    prompt=prompt,
-                    prompt_len=total_input_len,
-                    expected_output_len=int(output_lens[i]),
-                ))
+            
+            # Create base request
+            base_request = SampleRequest(
+                prompt=prompt,
+                prompt_len=total_input_len,
+                expected_output_len=int(output_lens[i]),
+            )
+            
+            # Add the base request and its rollouts
+            if rollout_num > 1:
+                # Add rollout_num copies of the same request
+                for _ in range(rollout_num):
+                    if len(requests) < num_requests:  # Ensure we don't exceed num_requests
+                        requests.append(base_request)
+            else:
+                requests.append(base_request)
+                
         return requests
 
 
