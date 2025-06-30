@@ -268,34 +268,34 @@ async def benchmark(
     else:
         raise ValueError(f"Unknown backend: {backend}")
 
-    print("Starting initial single prompt test run...")
-    test_prompt, test_prompt_len, test_output_len, test_mm_content = \
-        input_requests[0].prompt, input_requests[0].prompt_len, \
-        input_requests[0].expected_output_len, \
-            input_requests[0].multi_modal_data
+    # print("Starting initial single prompt test run...")
+    # test_prompt, test_prompt_len, test_output_len, test_mm_content = \
+    #     input_requests[0].prompt, input_requests[0].prompt_len, \
+    #     input_requests[0].expected_output_len, \
+    #         input_requests[0].multi_modal_data
 
-    assert test_mm_content is None or isinstance(test_mm_content, dict)
-    test_input = RequestFuncInput(
-        model=model_id,
-        model_name=model_name,
-        prompt=test_prompt,
-        api_url=api_url,
-        prompt_len=test_prompt_len,
-        output_len=test_output_len,
-        logprobs=logprobs,
-        multi_modal_content=test_mm_content,
-        ignore_eos=ignore_eos,
-        extra_body=extra_body,
-    )
+    # assert test_mm_content is None or isinstance(test_mm_content, dict)
+    # test_input = RequestFuncInput(
+    #     model=model_id,
+    #     model_name=model_name,
+    #     prompt=test_prompt,
+    #     api_url=api_url,
+    #     prompt_len=test_prompt_len,
+    #     output_len=test_output_len,
+    #     logprobs=logprobs,
+    #     multi_modal_content=test_mm_content,
+    #     ignore_eos=ignore_eos,
+    #     extra_body=extra_body,
+    # )
 
-    test_output = await request_func(request_func_input=test_input)
+    # test_output = await request_func(request_func_input=test_input)
 
-    if not test_output.success:
-        raise ValueError(
-            "Initial test run failed - Please make sure benchmark arguments "
-            f"are correctly specified. Error: {test_output.error}")
-    else:
-        print("Initial test run completed. Starting main benchmark run...")
+    # if not test_output.success:
+    #     raise ValueError(
+    #         "Initial test run failed - Please make sure benchmark arguments "
+    #         f"are correctly specified. Error: {test_output.error}")
+    # else:
+    #     print("Initial test run completed. Starting main benchmark run...")
 
     if lora_modules:
         # For each input request, choose a LoRA module at random.
@@ -655,6 +655,7 @@ def main(args: argparse.Namespace):
                 input_len=args.random_input_len,
                 output_len=args.random_output_len,
                 range_ratio=args.random_range_ratio,
+                rollout_num=args.rollout_num,
             )
         }
 
@@ -1029,6 +1030,12 @@ if __name__ == "__main__":
               "a random "
               "context length sampled from [input_len * (1 - range_ratio), "
               "input_len * (1 + range_ratio)]."),
+    )
+    random_group.add_argument(
+        "--rollout-num",
+        type=int,
+        default=1,
+        help="Number of rollouts for each request. Used only for random sampling.",
     )
 
     hf_group = parser.add_argument_group("hf dataset options")
